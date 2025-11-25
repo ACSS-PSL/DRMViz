@@ -3,7 +3,11 @@ name: ESLint
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'visualization/**'
   pull_request:
+    paths:
+      - 'visualization/**'
 
 jobs:
   eslint:
