@@ -11,14 +11,14 @@ const GraphDataController: FC<PropsWithChildren<{ filters: FiltersState }>> = ({
    * Apply filters to graphology:
    */
   useEffect(() => {
-    const { minYear, maxYear } = filters;
+    const { minYear, maxYear, edgeLabels } = filters;
     graph.forEachEdge((e, attr, _source, _target) => {
-      graph.setEdgeAttribute(e, "hidden", attr["year"] < minYear || attr["year"] > maxYear);
-    })
+      graph.setEdgeAttribute(e, "hidden", attr["year"] < minYear || attr["year"] > maxYear || !edgeLabels[attr["label"]]);
+    });
     graph.forEachNode(node => {
       let hideNode = true;
       for (const e of graph.edges(node).values()) {
-        graph.getEdgeAttribute(e, "hidden")
+        graph.getEdgeAttribute(e, "hidden");
         if (!graph.getEdgeAttribute(e, "hidden")) {
           hideNode = false;
           break;

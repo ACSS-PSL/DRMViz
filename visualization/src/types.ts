@@ -20,9 +20,11 @@ export interface Cluster {
   clusterLabel: string;
 }
 
-export interface Tag {
+export interface EdgeLabel {
   key: string;
-  image: string;
+  name: string;
+  color_highlight: string;
+  color_fade: string;
 }
 
 export interface Dataset {
@@ -33,4 +35,5 @@ export interface Dataset {
 export interface FiltersState {
   minYear: number;
   maxYear: number;
+  edgeLabels: Record<string, boolean>;
 }

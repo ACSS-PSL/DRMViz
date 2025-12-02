@@ -58,7 +58,7 @@ const SearchField: FC<{ filters: FiltersState }> = ({ filters }) => {
           return;
         }
 
-        const results = fuseIndex.search(query).map((r) => r.item).filter((item) => !graph.getNodeAttribute(item.id, "hidden"))
+        const results = fuseIndex.search(query).map((r) => r.item).filter((item) => !graph.getNodeAttribute(item.id, "hidden"));
 
         const bestResults = results.slice(0, NUM_SEARCH_RESULTS);
         setValues(bestResults);
@@ -120,7 +120,7 @@ const SearchField: FC<{ filters: FiltersState }> = ({ filters }) => {
 
       const itemHeight = 17 + 16 + 2.736; // Text height + vertical paddings + top margin
       const desiredHeight = values.length * itemHeight + Math.max(values.length - 1, 0);  // Number of items multiplied by their height + the number of 1px inter-item borders
-      const maxHeight = NUM_SEARCH_RESULTS * itemHeight + Math.max(values.length - 1, 0)
+      const maxHeight = NUM_SEARCH_RESULTS * itemHeight + Math.max(values.length - 1, 0);
 
       if (spaceAbove >= maxHeight + gap) {  // anchor above using bottom
         const bottom = window.innerHeight - rect.top + gap;

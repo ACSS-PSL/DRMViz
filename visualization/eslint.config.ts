@@ -26,6 +26,7 @@ export default defineConfig([
       ...pluginReact.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
 
+      "semi": ["warn", "always"],
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "react/require-default-props": "off",

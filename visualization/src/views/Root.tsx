@@ -8,7 +8,7 @@ import { GrClose } from "react-icons/gr";
 import { Settings } from "sigma/settings";
 
 import { drawHover, drawLabel } from "../canvas-utils";
-import { YEAR_LOWER_BOUND, YEAR_UPPER_BOUND, COLOR_PALETTE_FADE } from "../constants"
+import { YEAR_LOWER_BOUND, YEAR_UPPER_BOUND, EDGE_LABELS_METADATA } from "../constants";
 import { Dataset, FiltersState } from "../types";
 import DescriptionPanel from "./DescriptionPanel";
 import GraphDataController from "./GraphDataController";
@@ -17,6 +17,8 @@ import GraphSettingsController from "./GraphSettingsController";
 import GraphTitle from "./GraphTitle";
 import SearchField from "./SearchField";
 import YearRangePanel from "./YearRangePanel";
+import EdgeFilterPanel from "./EdgeFiltrerPanel";
+import { keyBy, mapValues, omit, find } from "lodash";
 
 const Root: FC = () => {
   const graph = useMemo(() => new Graph({ multi: true, type: "mixed" }), []);
@@ -25,7 +27,8 @@ const Root: FC = () => {
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [filtersState, setFiltersState] = useState<FiltersState>({
     minYear: YEAR_LOWER_BOUND,
-    maxYear: YEAR_UPPER_BOUND
+    maxYear: YEAR_UPPER_BOUND,
+    edgeLabels: {}
   });
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const sigmaSettings: Partial<Settings> = useMemo(() => ({
@@ -65,7 +68,7 @@ const Root: FC = () => {
           const commonAttrs = {
             year: edge["year"],
             label: edge["label"],
-            color: COLOR_PALETTE_FADE[edge["label"]] || "#999",
+            color: find(EDGE_LABELS_METADATA, { key: edge["label"] })?.color_fade || "#999",
           };
 
           if (edge["label"] === "same_jury") {
@@ -93,7 +96,8 @@ const Root: FC = () => {
 
         setFiltersState({
           minYear: YEAR_LOWER_BOUND,
-          maxYear: YEAR_UPPER_BOUND
+          maxYear: YEAR_UPPER_BOUND,
+          edgeLabels: mapValues(keyBy(EDGE_LABELS_METADATA, "key"), () => true)
         });
         setDataset(dataset);
         requestAnimationFrame(() => setDataReady(true));
@@ -148,6 +152,22 @@ const Root: FC = () => {
               <div className="panels">
                 <SearchField filters={filtersState} />
                 <DescriptionPanel />
+                <EdgeFilterPanel
+                  edgeLabels={EDGE_LABELS_METADATA}
+                  filters={filtersState}
+                  setLabels={(labels) =>
+                    setFiltersState((filters) => ({
+                      ...filters,
+                      edgeLabels: labels,
+                    }))
+                  }
+                  toggleLabel={(label) => {
+                    setFiltersState((filters) => ({
+                      ...filters,
+                      edgeLabels: filters.edgeLabels[label] ? omit(filters.edgeLabels, label) : { ...filters.edgeLabels, [label]: true },
+                    }));
+                  }}
+                />
                 <YearRangePanel
                   lowerBound={YEAR_LOWER_BOUND}
                   upperBound={YEAR_UPPER_BOUND}

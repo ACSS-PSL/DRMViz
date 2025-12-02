@@ -2,9 +2,10 @@ import { useSetSettings, useSigma } from "@react-sigma/core";
 import { Attributes } from "graphology-types";
 import { FC, PropsWithChildren, useEffect, useMemo } from "react";
 
-import { COLOR_PALETTE_FADE, COLOR_PALETTE_HIGHLIGHT } from "../constants";
+import { EDGE_LABELS_METADATA } from "../constants";
 import { drawHover, drawLabel } from "../canvas-utils";
 import useDebounce from "../use-debounce";
+import { find } from "lodash";
 
 const NODE_FADE_COLOR = "#bbb";
 //const EDGE_FADE_COLOR = "#eee";
@@ -41,8 +42,8 @@ const GraphSettingsController: FC<PropsWithChildren<{ hoveredNode: string | null
       edgeReducer: (edge: string, data: Attributes) => {
         if (debouncedHoveredNode) {
           return graph.hasExtremity(edge, debouncedHoveredNode)
-            ? { ...data, color: COLOR_PALETTE_HIGHLIGHT[data["label"]], size: 4 }
-            : { ...data, color: COLOR_PALETTE_FADE[data["label"]], hidden: true };
+            ? { ...data, color: find(EDGE_LABELS_METADATA, { key: data["label"] })?.color_highlight || "#444", size: 4 }
+            : { ...data, color: find(EDGE_LABELS_METADATA, { key: data["label"] })?.color_fade || "#999", hidden: true };
         }
         return data;
       },
@@ -72,8 +73,8 @@ const GraphSettingsController: FC<PropsWithChildren<{ hoveredNode: string | null
       debouncedHoveredNode
         ? (edge, data) =>
             graph.hasExtremity(edge, debouncedHoveredNode)
-              ? { ...data, color: COLOR_PALETTE_HIGHLIGHT[data["label"]], size: 4 }
-              : { ...data, color: COLOR_PALETTE_FADE[data["label"]], hidden: true }
+              ? { ...data, color: find(EDGE_LABELS_METADATA, { key: data["label"] })?.color_highlight || "#444", size: 4 }
+              : { ...data, color: find(EDGE_LABELS_METADATA, { key: data["label"] })?.color_fade || "#999", hidden: true }
         : null,
     );
   }, [debouncedHoveredNode, sigma, graph]);
