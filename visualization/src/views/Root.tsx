@@ -8,7 +8,7 @@ import { GrClose } from "react-icons/gr";
 import { Settings } from "sigma/settings";
 
 import { drawHover, drawLabel } from "../canvas-utils";
-import { YEAR_LOWER_BOUND, YEAR_UPPER_BOUND } from "../constants"
+import { YEAR_LOWER_BOUND, YEAR_UPPER_BOUND, COLOR_PALETTE_FADE } from "../constants"
 import { Dataset, FiltersState } from "../types";
 import DescriptionPanel from "./DescriptionPanel";
 import GraphDataController from "./GraphDataController";
@@ -19,7 +19,7 @@ import SearchField from "./SearchField";
 import YearRangePanel from "./YearRangePanel";
 
 const Root: FC = () => {
-  const graph = useMemo(() => new Graph({ multi: true, type: "undirected" }), []);
+  const graph = useMemo(() => new Graph({ multi: true, type: "mixed" }), []);
   const [showContents, setShowContents] = useState(false);
   const [dataReady, setDataReady] = useState(false);
   const [dataset, setDataset] = useState<Dataset | null>(null);
@@ -60,22 +60,35 @@ const Root: FC = () => {
             //image: `./images/${tags[node.tag].image}`,
           }),
         );
-        dataset.edges.forEach((edge) => graph.addEdge(edge["source"], edge["target"], { size: edge["weight"], year: edge["year"] }));
 
-        // Use degrees as node sizes:
-        const scores = graph.nodes().map((node) => graph.getNodeAttribute(node, "score"));
+        dataset.edges.forEach((edge) => {
+          const commonAttrs = {
+            year: edge["year"],
+            label: edge["label"],
+            color: COLOR_PALETTE_FADE[edge["label"]] || "#999",
+          };
+
+          if (edge["label"] === "same_jury") {
+            graph.addUndirectedEdge(edge["source"], edge["target"], { ...commonAttrs, type: "line" });
+          } else {
+            graph.addDirectedEdge(edge["source"], edge["target"], { ...commonAttrs, type: "arrow" });
+          }
+        });
+
+        const scores = graph.nodes().map((node) => graph.getNodeAttribute(node, "weight"));
         const minDegree = Math.min(...scores);
         const maxDegree = Math.max(...scores);
+
         const MIN_NODE_SIZE = 3;
-        const MAX_NODE_SIZE = 30;
+        const MAX_NODE_SIZE = 15;
         graph.forEachNode((node) =>
           graph.setNodeAttribute(
             node,
             "size",
-            ((graph.getNodeAttribute(node, "score") - minDegree) / (maxDegree - minDegree)) *
+            ((graph.getNodeAttribute(node, "weight") - minDegree) / (maxDegree - minDegree)) *
               (MAX_NODE_SIZE - MIN_NODE_SIZE) +
               MIN_NODE_SIZE,
-          ),
+          )
         );
 
         setFiltersState({

@@ -1,7 +1,7 @@
 export interface NodeData {
   key: string;
   label: string;
-  gender: string;
+  weight: number;
   x: number;
   y: number;
 }
@@ -11,6 +11,7 @@ export interface EdgeData {
   target: string;
   weight: number;
   year: number;
+  label: string;
 }
 
 export interface Cluster {

@@ -2,11 +2,12 @@ import { useSetSettings, useSigma } from "@react-sigma/core";
 import { Attributes } from "graphology-types";
 import { FC, PropsWithChildren, useEffect, useMemo } from "react";
 
+import { COLOR_PALETTE_FADE, COLOR_PALETTE_HIGHLIGHT } from "../constants";
 import { drawHover, drawLabel } from "../canvas-utils";
 import useDebounce from "../use-debounce";
 
 const NODE_FADE_COLOR = "#bbb";
-const EDGE_FADE_COLOR = "#eee";
+//const EDGE_FADE_COLOR = "#eee";
 
 const GraphSettingsController: FC<PropsWithChildren<{ hoveredNode: string | null }>> = ({ children, hoveredNode }) => {
   const sigma = useSigma();
@@ -22,7 +23,7 @@ const GraphSettingsController: FC<PropsWithChildren<{ hoveredNode: string | null
    * instance:
    */
   useEffect(() => {
-    const hoveredColor: string = (debouncedHoveredNode && sigma.getNodeDisplayData(debouncedHoveredNode)?.color) || "";
+    //const hoveredColor: string = (debouncedHoveredNode && sigma.getNodeDisplayData(debouncedHoveredNode)?.color) || "";
 
     setSettings({
       defaultDrawNodeLabel: drawLabel,
@@ -40,8 +41,8 @@ const GraphSettingsController: FC<PropsWithChildren<{ hoveredNode: string | null
       edgeReducer: (edge: string, data: Attributes) => {
         if (debouncedHoveredNode) {
           return graph.hasExtremity(edge, debouncedHoveredNode)
-            ? { ...data, color: hoveredColor, size: 4 }
-            : { ...data, color: EDGE_FADE_COLOR, hidden: true };
+            ? { ...data, color: COLOR_PALETTE_HIGHLIGHT[data["label"]], size: 4 }
+            : { ...data, color: COLOR_PALETTE_FADE[data["label"]], hidden: true };
         }
         return data;
       },
@@ -53,7 +54,7 @@ const GraphSettingsController: FC<PropsWithChildren<{ hoveredNode: string | null
    * neighborhood:
    */
   useEffect(() => {
-    const hoveredColor: string = (debouncedHoveredNode && sigma.getNodeDisplayData(debouncedHoveredNode)?.color) || "";
+    //const hoveredColor: string = (debouncedHoveredNode && sigma.getNodeDisplayData(debouncedHoveredNode)?.color) || "";
 
     sigma.setSetting(
       "nodeReducer",
@@ -71,8 +72,8 @@ const GraphSettingsController: FC<PropsWithChildren<{ hoveredNode: string | null
       debouncedHoveredNode
         ? (edge, data) =>
             graph.hasExtremity(edge, debouncedHoveredNode)
-              ? { ...data, color: hoveredColor, size: 4 }
-              : { ...data, color: EDGE_FADE_COLOR, hidden: true }
+              ? { ...data, color: COLOR_PALETTE_HIGHLIGHT[data["label"]], size: 4 }
+              : { ...data, color: COLOR_PALETTE_FADE[data["label"]], hidden: true }
         : null,
     );
   }, [debouncedHoveredNode, sigma, graph]);
