@@ -151,13 +151,18 @@ def correct_author_director_names(thesesfr_df: pd.DataFrame, drm_df: pd.DataFram
 
 
 def filter_infrequent_members(df: pd.DataFrame, min_occurrences: int = 2) -> pd.DataFrame:
-    all_ids = [member[0] for members in df['jury_members'] for member in members]
+    all_ids = [member[0] for members in df["jury_members"] for member in members] + \
+              [advisor[0] for advisors in df["advisors"] for advisor in advisors] + \
+              [phd_student[0] for phd_student in df["phd_student"]]
     counts = pd.Series(all_ids).value_counts()
-    def keep_members(members):
-        return [m for m in members if counts.get(m[0], 0) >= min_occurrences]
     df = df.copy()
-    df['jury_members'] = df['jury_members'].apply(keep_members)
-    df = df[df['jury_members'].str.len() > 0]
+
+    df['advisors']     = df['advisors'].apply(lambda advisors: [advisor for advisor in advisors if counts.get(advisor[0], 0) >= min_occurrences])
+    df['jury_members'] = df['jury_members'].apply(lambda members: [member for member in members if counts.get(member[0], 0) >= min_occurrences])
+    df['phd_student']  = df['phd_student'].apply(lambda phd_student: phd_student if counts.get(phd_student[0], 0) >= min_occurrences else None)
+
+    df = df[(df['advisors'].str.len() > 0) & (df['jury_members'].str.len() > 0) & df['phd_student']]
+
     return df
 
 
@@ -362,7 +367,7 @@ if __name__ == '__main__':
     thesesfr_df = extract_thesis_participants(thesesfr_df)
     thesesfr_df, drm_df = filter_non_drm_theses(thesesfr_df, drm_df)
     thesesfr_df = correct_author_director_names(thesesfr_df, drm_df)
-    #thesesfr_df = filter_infrequent_members(thesesfr_df, min_occurrences=parsed.min_occurrences)
+    thesesfr_df = filter_infrequent_members(thesesfr_df, min_occurrences=parsed.min_occurrences)
     edges, participation_count, members_info = build_edges(thesesfr_df)
     df_edges = edges_to_df(edges)
     spring_layout = create_spring_layout(df_edges, members_info)
