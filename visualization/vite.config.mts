@@ -4,7 +4,7 @@ import checker from "vite-plugin-checker";
 import viteTsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  base: "",
+  base: "/DRMViz/",
   plugins: [
     react(),
     viteTsconfigPaths(),

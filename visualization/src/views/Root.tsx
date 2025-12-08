@@ -59,6 +59,7 @@ const Root: FC = () => {
         dataset.nodes.forEach((node) =>
           graph.addNode(node.key, {
             ...node,
+            //color: "#bc7171ff"
             //...omit(clusters[node.cluster], "key"),
             //image: `./images/${tags[node.tag].image}`,
           }),

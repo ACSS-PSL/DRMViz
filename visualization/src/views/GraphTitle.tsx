@@ -33,7 +33,7 @@ const GraphTitle: FC<{ filters: FiltersState }> = ({ filters }) => {
           {visibleItems.nodes !== graph.order
             ? ` (only ${prettyPercentage(visibleItems.nodes / graph.order)} visible)`
             : ""}
-          , {graph.size} edge
+          , {graph.size} link
           {graph.size > 1 ? "s" : ""}{" "}
           {visibleItems.edges !== graph.size
             ? ` (only ${prettyPercentage(visibleItems.edges / graph.size)} visible)`

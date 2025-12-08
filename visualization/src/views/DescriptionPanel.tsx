@@ -42,7 +42,7 @@ const DescriptionPanel: FC = () => {
           sigma.js
         </a>
         . You can read the source code{" "}
-        <a target="_blank" rel="noreferrer" href="">
+        <a target="_blank" rel="noreferrer" href="https://github.com/ACSS-PSL/DRMViz">
           on GitHub
         </a>
         .
