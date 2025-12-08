@@ -79,18 +79,76 @@ def extract_thesis_participants(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def filter_non_drm_theses(thesesfr_df: pd.DataFrame, drm_df: pd.DataFrame) -> pd.DataFrame:
+def filter_non_drm_theses(thesesfr_df: pd.DataFrame, drm_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     drm_df["author_identifier"]     = drm_df.apply(lambda row: row.author_idref     if row.author_idref     else f"{row.author_firstname} {row.author_surname}", axis="columns")
     drm_df["director_0_identifier"] = drm_df.apply(lambda row: row.director_0_idref if row.director_0_idref else f"{row.director_0_firstname} {row.director_0_surname}".strip(), axis="columns")
     drm_df["director_1_identifier"] = drm_df.apply(lambda row: row.director_1_idref if row.director_1_idref else f"{row.director_1_firstname} {row.director_1_surname}".strip(), axis="columns")
     drm_df["director_2_identifier"] = drm_df.apply(lambda row: row.director_2_idref if row.director_2_idref else f"{row.director_2_firstname} {row.director_2_surname}".strip(), axis="columns")
 
+    identifiers = drm_df[["author_identifier", 
+                          "director_0_identifier",
+                          "director_1_identifier",
+                          "director_2_identifier"]].stack().unique()
+
     thesesfr_df = thesesfr_df.loc[
-        thesesfr_df.apply(lambda row: row.phd_student[0] if row.phd_student else "", axis="columns"
-                  ).isin(drm_df.author_identifier)
+        thesesfr_df.apply(lambda row: row.phd_student[0] if row.phd_student else "", axis="columns").isin(identifiers) |
+        thesesfr_df.apply(lambda row: any(advisor[0] in identifiers for advisor in row.advisors), axis="columns")
     ]
 
+    return thesesfr_df, drm_df
+
+
+def correct_author_director_names(thesesfr_df: pd.DataFrame, drm_df: pd.DataFrame) -> pd.DataFrame:
+    mapping: dict[str, str] = {}
+
+    def fullname_from_parts(first, last):
+        first = '' if pd.isna(first) else str(first).strip()
+        last = '' if pd.isna(last) else str(last).strip()
+        full = f"{first} {last}".strip()
+        return full
+
+    for drm_row in drm_df.itertuples(index=False):
+        author_id = drm_row.author_identifier
+
+        if author_id and not pd.isna(author_id) and author_id != '':
+            full_name = fullname_from_parts(drm_row.author_firstname, drm_row.author_surname)
+            if full_name:
+                mapping[author_id] = full_name
+
+        for i in range(3):
+            id_col = f'director_{i}_identifier'
+            first_col = f'director_{i}_firstname'
+            last_col = f'director_{i}_surname'
+            
+            dir_id = getattr(drm_row, id_col)
+            
+            if dir_id and not pd.isna(dir_id) and dir_id != '':
+                full_name = fullname_from_parts(getattr(drm_row, first_col, ''), getattr(drm_row, last_col, ''))
+                if full_name:
+                    mapping[dir_id] = full_name
+
+    def _update_row(row: pd.Series) -> pd.Series:
+        phd = row.phd_student
+        if phd and len(phd) >= 1 and phd[0]:
+            pid = phd[0]
+            if pid in mapping:
+                row['phd_student'] = (pid, mapping[pid])
+
+        advisors = row.advisors
+        if advisors and isinstance(advisors, (list, tuple)):
+            new_advisors = []
+            for advisor in advisors:
+                if advisor[0] in mapping:
+                    new_advisors.append((advisor[0], mapping[advisor[0]]))
+                else:
+                    new_advisors.append((advisor[0], advisor[1]))
+            row['advisors'] = new_advisors
+
+        return row
+
+    thesesfr_df = thesesfr_df.apply(_update_row, axis='columns')
     return thesesfr_df
+
 
 def filter_infrequent_members(df: pd.DataFrame, min_occurrences: int = 2) -> pd.DataFrame:
     all_ids = [member[0] for members in df['jury_members'] for member in members]
@@ -104,8 +162,8 @@ def filter_infrequent_members(df: pd.DataFrame, min_occurrences: int = 2) -> pd.
 
 
 def build_edges(df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]], 
-                                                  dict[tuple[str, int], int], 
-                                                  dict[str, dict[str, str]]]:
+                                                dict[tuple[str, int], int], 
+                                                dict[str, dict[str, str]]]:
     """Builds the edges dictionary as well as additional data to facilitate information retrieval.
 
     Parameters
@@ -156,8 +214,6 @@ def build_edges(df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]]
         }
         ```
     """
-    # We'll produce directed, labeled edges aggregated per year.
-    # Keyed as (source_id, target_id, label) -> { year: count }
     edges: dict[tuple[str, str, str], dict[int, int]] = {}
     participation_count: dict[tuple[str, int], int] = defaultdict(int)
     members_info: dict[str, dict[str, str]] = {}
@@ -211,7 +267,7 @@ def build_edges(df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]]
                 edges[key] = defaultdict(int)
             edges[key][year] += 1
 
-        # jury <-> advisor : "same_jury" (directed from jury member to advisor)
+        # jury <-> advisor : "same_jury" (directed from jury member/advisor to jury member/advisor)
         for (m1_id, _), (m2_id, _) in combinations(advisors + jury_members, 2):
             if not m1_id or not m2_id:
                 continue
@@ -278,7 +334,7 @@ def create_spring_layout(df_edges: pd.DataFrame, members_info: dict[str, dict[st
     graph.add_weighted_edges_from(df_edges[["source", "target", "weight"]].to_numpy())
     single_nodes = [m for m in members_info if not graph.has_node(m)]
     graph.add_nodes_from(single_nodes)
-    spring = nx.spring_layout(graph, k=3/(len(graph) ** 1/2), seed=1234)
+    spring = nx.spring_layout(graph, k=10/(len(graph) ** 1/2), seed=1234)
 
     return spring
 
@@ -304,8 +360,9 @@ if __name__ == '__main__':
 
     thesesfr_df, drm_df = load_data(parsed.input_path)
     thesesfr_df = extract_thesis_participants(thesesfr_df)
-    thesesfr_df = filter_non_drm_theses(thesesfr_df, drm_df)
-    thesesfr_df = filter_infrequent_members(thesesfr_df, min_occurrences=parsed.min_occurrences)
+    thesesfr_df, drm_df = filter_non_drm_theses(thesesfr_df, drm_df)
+    thesesfr_df = correct_author_director_names(thesesfr_df, drm_df)
+    #thesesfr_df = filter_infrequent_members(thesesfr_df, min_occurrences=parsed.min_occurrences)
     edges, participation_count, members_info = build_edges(thesesfr_df)
     df_edges = edges_to_df(edges)
     spring_layout = create_spring_layout(df_edges, members_info)
