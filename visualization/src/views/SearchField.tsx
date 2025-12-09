@@ -14,13 +14,12 @@ type ValueItem = {
   label: string;
 };
 
-const SearchField: FC<{ filters: FiltersState }> = ({ filters }) => {
+const SearchField: FC<{ filters: FiltersState; externalSelected?: string | null; onSelectNode?: (id: string) => void }> = ({ filters, externalSelected, onSelectNode }) => {
   const sigma = useSigma();
   const graph = useMemo(() => sigma.getGraph(), [sigma]);
 
   const [search, setSearch] = useState<string>("");
   const [values, setValues] = useState<ValueItem[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const portalRef = useRef<HTMLDivElement | null>(null);
 
@@ -143,23 +142,17 @@ const SearchField: FC<{ filters: FiltersState }> = ({ filters }) => {
     };
   }, [isOpenLocal, values.length]);
 
-  // Highlight selected node + animate camera
+  // SearchField no longer directly highlights or animates the camera.
+  // Selection side-effects are handled by NodeSelectorController mounted in Root.
+
+  // React to external selections (e.g., clicks coming from GraphEventsController)
   useEffect(() => {
-    if (!selected) return;
+    if (!externalSelected) return;
 
-    graph.setNodeAttribute(selected, "highlighted", true);
-    const pos = sigma.getNodeDisplayData(selected);
-
-    if (pos)
-      sigma.getCamera().animate(
-        { ...pos, ratio: 0.05 },
-        { duration: 600 }
-      );
-
-    return () => {
-      graph.setNodeAttribute(selected, "highlighted", false);
-    };
-  }, [selected, sigma, graph]);
+    // Update the input text to the node label if available and set selected id
+    const label = graph.getNodeAttribute(externalSelected, "label");
+    if (label) setSearch(label as string);
+  }, [externalSelected, graph]);
 
   return (
     <Downshift<ValueItem>
@@ -167,8 +160,8 @@ const SearchField: FC<{ filters: FiltersState }> = ({ filters }) => {
       onSelect={(item) => {
         if (!item) return;
         setSearch(item.label);
-        setSelected(item.id);
         setValues([]);
+        if (onSelectNode) onSelectNode(item.id);
       }}
       itemToString={(item) => (item ? item.label : "")}
       onStateChange={(changes: StateChangeOptions<ValueItem>) => {
@@ -185,7 +178,6 @@ const SearchField: FC<{ filters: FiltersState }> = ({ filters }) => {
             // ignore inputValue change coming from Downshift on blur to avoid resetting to previous selection
           } else if (allowTypes.has(t) || typeof t === "undefined") {
             setSearch(changes.inputValue ?? "");
-            setSelected(null);
           }
         }
 

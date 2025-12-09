@@ -8,12 +8,13 @@ import { GrClose } from "react-icons/gr";
 import { Settings } from "sigma/settings";
 
 import { drawHover, drawLabel } from "../canvas-utils";
-import { YEAR_LOWER_BOUND, YEAR_UPPER_BOUND, EDGE_LABELS_METADATA } from "../constants";
+import { YEAR_LOWER_BOUND, YEAR_UPPER_BOUND, EDGE_LABELS_METADATA, NODE_LABELS_METADATA } from "../constants";
 import { Dataset, FiltersState } from "../types";
 import DescriptionPanel from "./DescriptionPanel";
 import GraphDataController from "./GraphDataController";
 import GraphEventsController from "./GraphEventsController";
 import GraphSettingsController from "./GraphSettingsController";
+import NodeSelectorController from "./NodeSelectorController";
 import GraphTitle from "./GraphTitle";
 import SearchField from "./SearchField";
 import YearRangePanel from "./YearRangePanel";
@@ -31,6 +32,7 @@ const Root: FC = () => {
     edgeLabels: {}
   });
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const sigmaSettings: Partial<Settings> = useMemo(() => ({
     nodeProgramClasses: {
       image: createNodeImageProgram({
@@ -59,7 +61,7 @@ const Root: FC = () => {
         dataset.nodes.forEach((node) =>
           graph.addNode(node.key, {
             ...node,
-            //color: "#bc7171ff"
+            color: find(NODE_LABELS_METADATA, { key: node["role"] })?.color_fade
             //...omit(clusters[node.cluster], "key"),
             //image: `./images/${tags[node.tag].image}`,
           }),
@@ -111,8 +113,13 @@ const Root: FC = () => {
     <div id="app-root" className={showContents ? "show-contents" : ""}>
       <SigmaContainer graph={graph} settings={sigmaSettings} className="react-sigma">
         <GraphSettingsController hoveredNode={hoveredNode} />
-        <GraphEventsController setHoveredNode={setHoveredNode} />
+        <GraphEventsController
+          setHoveredNode={setHoveredNode}
+          onNodeClick={(nodeId) => setSelectedNode(nodeId)}
+          onStageClick={() => setSelectedNode(null)}
+        />
         <GraphDataController filters={filtersState} />
+        <NodeSelectorController selectedNode={selectedNode} />
 
         {dataReady && (
           <>
@@ -151,7 +158,7 @@ const Root: FC = () => {
               </div>
               <GraphTitle filters={filtersState} />
               <div className="panels">
-                <SearchField filters={filtersState} />
+                <SearchField filters={filtersState} externalSelected={selectedNode} onSelectNode={(id) => setSelectedNode(id)} />
                 <DescriptionPanel />
                 <EdgeFilterPanel
                   edgeLabels={EDGE_LABELS_METADATA}
