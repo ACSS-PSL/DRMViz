@@ -177,7 +177,7 @@ def filter_infrequent_members(df: pd.DataFrame, min_occurrences: int = 2) -> pd.
 
     df['jury_members'] = df['jury_members'].apply(lambda members: [member for member in members if (counts.get(member[0], 0) >= min_occurrences) or member in phd_team_ids])
 
-    df = df.loc[(df['advisors'].str.len() > 0) & (df['jury_members'].str.len() > 0) & df['phd_student']]
+    df = df.loc[(df['advisors'].str.len() > 0) & df['phd_student']]
 
     return df
 
