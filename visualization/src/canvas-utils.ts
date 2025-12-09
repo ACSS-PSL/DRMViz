@@ -1,5 +1,7 @@
+import { find } from "lodash";
 import { Settings } from "sigma/settings";
 import { NodeDisplayData, PartialButFor, PlainObject } from "sigma/types";
+import { NODE_LABELS_METADATA } from "./constants";
 
 const TEXT_COLOR = "#000000";
 
@@ -39,7 +41,8 @@ export function drawHover(context: CanvasRenderingContext2D, data: PlainObject, 
 
   const label = data.label;
   const subLabel = data.tag !== "unknown" ? data.tag : "";
-  const clusterLabel = data.clusterLabel;
+  const roleName = find(NODE_LABELS_METADATA, { key: data["role"] })?.name
+  const roleLabel = roleName ? roleName : "";
 
   // Then we draw the label background
   context.beginPath();
@@ -54,18 +57,18 @@ export function drawHover(context: CanvasRenderingContext2D, data: PlainObject, 
   context.font = `${weight} ${subLabelSize}px ${font}`;
   const subLabelWidth = subLabel ? context.measureText(subLabel).width : 0;
   context.font = `${weight} ${subLabelSize}px ${font}`;
-  const clusterLabelWidth = clusterLabel ? context.measureText(clusterLabel).width : 0;
+  const roleLabelWidth = roleLabel ? context.measureText(roleLabel).width : 0;
 
-  const textWidth = Math.max(labelWidth, subLabelWidth, clusterLabelWidth);
+  const textWidth = Math.max(labelWidth, subLabelWidth, roleLabelWidth);
 
   const x = Math.round(data.x);
   const y = Math.round(data.y);
   const w = Math.round(textWidth + size / 2 + data.size + 3);
   const hLabel = Math.round(size / 2 + 4);
   const hSubLabel = subLabel ? Math.round(subLabelSize / 2 + 9) : 0;
-  const hClusterLabel = Math.round(subLabelSize / 2 + 9);
+  const hRoleLabel = Math.round(subLabelSize / 2 + 9);
 
-  drawRoundRect(context, x, y - hSubLabel - 12, w, hClusterLabel + hLabel + hSubLabel + 12, 5);
+  drawRoundRect(context, x, y - hSubLabel - 12, w, hRoleLabel + hLabel + hSubLabel + 12, 5);
   context.closePath();
   context.fill();
 
@@ -86,7 +89,7 @@ export function drawHover(context: CanvasRenderingContext2D, data: PlainObject, 
 
   context.fillStyle = data.color;
   context.font = `${weight} ${subLabelSize}px ${font}`;
-  context.fillText(clusterLabel, data.x + data.size + 3, data.y + size / 3 + 3 + subLabelSize);
+  context.fillText(roleLabel, data.x + data.size + 3, data.y + size / 3 + 3 + subLabelSize);
 }
 
 /**

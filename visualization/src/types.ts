@@ -1,6 +1,7 @@
 export interface NodeData {
   key: string;
   label: string;
+  role: string;
   weight: number;
   x: number;
   y: number;
@@ -21,6 +22,13 @@ export interface Cluster {
 }
 
 export interface EdgeLabel {
+  key: string;
+  name: string;
+  color_highlight: string;
+  color_fade: string;
+}
+
+export interface NodeLabel {
   key: string;
   name: string;
   color_highlight: string;
