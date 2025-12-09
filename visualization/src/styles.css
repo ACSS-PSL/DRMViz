@@ -45,6 +45,9 @@ a {
 a:hover {
   opacity: var(--hover-opacity);
 }
+b {
+  font-weight:900;
+}
 
 /**
  * LAYOUT:

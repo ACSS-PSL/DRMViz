@@ -14,8 +14,11 @@ const DescriptionPanel: FC = () => {
       }
     >
       <p>
-        This map represents a <i>network</i> of Ph. D. students and jury members from the DRM research lab. Each{" "}
-        <i>node</i> represents a researcher and each edge represents a co-occurrence in a jury.
+        This map represents a <i>network</i> of Ph. D. students, Ph. D. advisors and jury members from the DRM research lab.{" "}
+        Each <i>node</i> represents a researcher and each edge represents <b>a thesis supervision</b> (directed from the{" "}
+        advisor to the student), <b>a thesis examination</b> (directed from the jury member to the student), or <b>a{" "}
+        co-occurrence in a jury</b> (undirected). Jury members are included even if they have not done their Ph. D. with DRM{" "}
+        or supervized a DRM thesis, but only if they took part in at least 2 DRM-related juries.
       </p>
       <p>
         The data was enriched using open data from{" "}
