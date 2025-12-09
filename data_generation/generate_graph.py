@@ -325,37 +325,6 @@ def edges_to_df(edges: dict[tuple[str, str, str], dict[int, int]]) -> pd.DataFra
     return df_edges.sort_values(['source', 'target', 'year', 'label']).reset_index(drop=True)
 
 
-def save_graph(members_info: dict[str, dict[str, str]], df_edges: pd.DataFrame, spring_layout: dict, out_path: str) -> None:
-    nodes = []
-    for member_id, info in members_info.items():
-        nodes.append({
-            "key": member_id, 
-            "label": info["fullname"],
-            "weight": info["weight"],
-            "role": info["role"],
-            "x": spring_layout[member_id][0],
-            "y": spring_layout[member_id][1]
-        })
-    
-    edges = []
-    for edge in df_edges.itertuples():
-        edges.append({
-            "source": edge.source,
-            "target": edge.target,
-            "label": edge.label,
-            "weight": edge.weight,
-            "year": edge.year
-        })
-    
-    dataset = {
-        "nodes": nodes,
-        "edges": edges
-    }
-
-    with open(os.path.join(out_path, "dataset.json"), "w", encoding="utf8") as file:
-        json.dump(dataset, file, indent=2)
-
-
 def create_spring_layout(df_edges: pd.DataFrame, members_info: dict[str, dict[str, str]]) -> dict:
     graph = nx.Graph()
     graph.add_weighted_edges_from(df_edges[["source", "target", "weight"]].to_numpy())
@@ -391,6 +360,37 @@ def apply_clustering(df_edges: pd.DataFrame, members_info: dict[str, dict[str, s
                 members_info[node]["cluster"] = i
                 break
     return members_info
+
+
+def save_graph(members_info: dict[str, dict[str, str]], df_edges: pd.DataFrame, spring_layout: dict, out_path: str) -> None:
+    nodes = []
+    for member_id, info in members_info.items():
+        nodes.append({
+            "key": member_id, 
+            "label": info["fullname"],
+            "weight": info["weight"],
+            "role": info["role"],
+            "x": spring_layout[member_id][0],
+            "y": spring_layout[member_id][1]
+        })
+    
+    edges = []
+    for edge in df_edges.itertuples():
+        edges.append({
+            "source": edge.source,
+            "target": edge.target,
+            "label": edge.label,
+            "weight": edge.weight,
+            "year": edge.year
+        })
+    
+    dataset = {
+        "nodes": nodes,
+        "edges": edges
+    }
+
+    with open(os.path.join(out_path, "dataset.json"), "w", encoding="utf8") as file:
+        json.dump(dataset, file, separators=(',', ':'), indent=None)
 
 
 if __name__ == '__main__':
