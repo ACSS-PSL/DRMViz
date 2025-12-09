@@ -151,17 +151,33 @@ def correct_author_director_names(thesesfr_df: pd.DataFrame, drm_df: pd.DataFram
 
 
 def filter_infrequent_members(df: pd.DataFrame, min_occurrences: int = 2) -> pd.DataFrame:
-    all_ids = [member[0] for members in df["jury_members"] for member in members] + \
-              [advisor[0] for advisors in df["advisors"] for advisor in advisors] + \
-              [phd_student[0] for phd_student in df["phd_student"]]
-    counts = pd.Series(all_ids).value_counts()
+    """
+    Removes jury members who did not do their PhD in DRM or did not direct a DRM thesis if
+    they appear in less than `min_occurrences` juries.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The theses dataframe filtered to include only theses related to DRM by their PhD student or advisors.
+    min_occurrences : int, default=2
+        The minimum number or times a person should be in a jury to be kept in the dataset.
+
+    Returns
+    -------
+    pd.DataFrame
+        The theses dataframe filtered to keep only jury members occurring frequently-enough.
+    """
+    # TODO: ESSAYER DE COMPRENDRE POURQUOI LA VERSION PRÉCÉDENTE (min_occurrences=1 et filtrage appliqué à tous les types d'acteurs) 
+    # donne + d'edges et - de noeuds que la version actuelle
+    jury_members_ids = [member[0] for members in df["jury_members"] for member in members]
+    phd_team_ids = [advisor[0] for advisors in df["advisors"] for advisor in advisors] + [phd_student[0] for phd_student in df["phd_student"]]
+    
+    counts = pd.Series(jury_members_ids).value_counts()
     df = df.copy()
 
-    df['advisors']     = df['advisors'].apply(lambda advisors: [advisor for advisor in advisors if counts.get(advisor[0], 0) >= min_occurrences])
-    df['jury_members'] = df['jury_members'].apply(lambda members: [member for member in members if counts.get(member[0], 0) >= min_occurrences])
-    df['phd_student']  = df['phd_student'].apply(lambda phd_student: phd_student if counts.get(phd_student[0], 0) >= min_occurrences else None)
+    df['jury_members'] = df['jury_members'].apply(lambda members: [member for member in members if (counts.get(member[0], 0) >= min_occurrences) or member in phd_team_ids])
 
-    df = df[(df['advisors'].str.len() > 0) & (df['jury_members'].str.len() > 0) & df['phd_student']]
+    df = df.loc[(df['advisors'].str.len() > 0) & (df['jury_members'].str.len() > 0) & df['phd_student']]
 
     return df
 
@@ -212,7 +228,8 @@ def build_edges(df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]]
         ```json
         {
             "identifier_1": {
-                "fullname": "fullname"
+                "fullname": "fullname",
+                "role": "phd_student|advisor|jury_member"  // Priority order is phd_student > advisor > jury_member
             },
             "identifier_2": {...}
             ...
@@ -235,13 +252,15 @@ def build_edges(df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]]
 
         phd = row.phd_student
         if not phd or not phd[0]:
-            # can't attach supervised/examined edges without a phd identifier
             continue
         phd_id, phd_name = phd[0], phd[1] if len(phd) > 1 else ''
 
-        # record phd student info
-        if phd_id and phd_id not in members_info:
-            members_info[phd_id] = {'fullname': phd_name or ''}
+        participation_count[(phd_id, year)] += 1
+
+        if phd_id not in members_info:
+            members_info[phd_id] = {'fullname': phd_name or '', 'role': 'phd_student'}
+        else:
+            members_info[phd_id]['role'] = 'phd_student'
 
         advisors = list(row.advisors) if row.advisors is not None else []
         jury_members = list(row.jury_members) if row.jury_members is not None else []
@@ -252,7 +271,9 @@ def build_edges(df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]]
                 continue
             participation_count[(adv_id, year)] += 1
             if adv_id not in members_info:
-                members_info[adv_id] = {'fullname': adv_name or ''}
+                members_info[adv_id] = {'fullname': adv_name or '', 'role': 'advisor'}
+            elif members_info[adv_id]['role'] == "jury_member":
+                members_info[adv_id]['role'] = 'advisor'
 
             key = (adv_id, phd_id, 'supervizes')
             if key not in edges:
@@ -265,7 +286,7 @@ def build_edges(df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]]
                 continue
             participation_count[(jur_id, year)] += 1
             if jur_id not in members_info:
-                members_info[jur_id] = {'fullname': jur_name or ''}
+                members_info[jur_id] = {'fullname': jur_name or '', 'role': 'jury_member'}
 
             key = (jur_id, phd_id, 'examines')
             if key not in edges:
@@ -311,6 +332,7 @@ def save_graph(members_info: dict[str, dict[str, str]], df_edges: pd.DataFrame, 
             "key": member_id, 
             "label": info["fullname"],
             "weight": info["weight"],
+            "role": info["role"],
             "x": spring_layout[member_id][0],
             "y": spring_layout[member_id][1]
         })
@@ -356,11 +378,26 @@ def add_betweenness_centrality(df_edges: pd.DataFrame, members_info: dict[str, d
     return members_info
 
 
+def apply_clustering(df_edges: pd.DataFrame, members_info: dict[str, dict[str, str]]) -> dict:
+    graph = nx.Graph()
+    graph.add_weighted_edges_from(df_edges[["source", "target", "weight"]].to_numpy())
+    single_nodes = [m for m in members_info if not graph.has_node(m)]
+    graph.add_nodes_from(single_nodes)
+    louvain_clustering = nx.community.louvain_communities(graph, seed=12345)
+
+    for node in graph.nodes:
+        for i, cluster in enumerate(louvain_clustering):
+            if node in cluster:
+                members_info[node]["cluster"] = i
+                break
+    return members_info
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Generate co-occurrence edges from theses jury data")
     parser.add_argument('--input_path', '-i', default='./data')
     parser.add_argument('--output_path', '-o', default='./data', help='Output directory for edges and nodes CSV files')
-    parser.add_argument('--min-occurrences', '-m', type=int, default=1)
+    parser.add_argument('--min-occurrences', '-m', type=int, default=2)
     parsed = parser.parse_args()
 
     thesesfr_df, drm_df = load_data(parsed.input_path)
@@ -372,6 +409,7 @@ if __name__ == '__main__':
     df_edges = edges_to_df(edges)
     spring_layout = create_spring_layout(df_edges, members_info)
     members_info = add_betweenness_centrality(df_edges, members_info)
+    members_info = apply_clustering(df_edges, members_info)
 
     save_graph(members_info, df_edges, spring_layout, parsed.output_path)
     print(f"Saved {len(members_info)} nodes and {len(df_edges)} edges.")
