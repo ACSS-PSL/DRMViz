@@ -1,55 +1,59 @@
 import { useSigma } from "@react-sigma/core";
-import { FC, useEffect, useRef } from "react";
+import { FC, useEffect, useMemo, useRef } from "react";
 
 const NodeSelectorController: FC<{ selectedNode: string | null }> = ({ selectedNode }) => {
   const sigma = useSigma();
+  const graph = useMemo(() => sigma.getGraph(), [sigma]);
   const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    // cleanup previous
+    // capture the id so cleanup refers to the same node
+    const id = selectedNode;
+    
     if (cleanupRef.current) {
-      try {
-        cleanupRef.current();
-      } catch (e) {
-        // ignore
-      }
+      cleanupRef.current();
       cleanupRef.current = null;
     }
 
-    if (!selectedNode) return;
+    if (!id) return;
 
-    // perform selection (highlight + camera) - inlined from nodeSelector
-    try {
-      sigma.getGraph().setNodeAttribute(selectedNode, "highlighted", true);
-    } catch (e) {
-      // ignore
+    const camera = sigma.getCamera();
+
+    if (graph.hasNode(id) && !graph.getNodeAttribute(id, "hidden")) {
+      try {
+        graph.setNodeAttribute(id, "highlighted", true);
+      } catch (err) {
+        // log unexpected errors so we can debug
+        console.warn("Failed to highlight node", id, err);
+      }
+    } else {
+      return;
     }
 
-    const pos = sigma.getNodeDisplayData(selectedNode as any);
-    if (pos) {
-      sigma.getCamera().animate(
-        { ...pos, ratio: 0.05 },
-        { duration: 600 }
-      );
+    const pos = sigma.getNodeDisplayData(id);
+    if (pos && camera) {
+      try {
+        camera.animate({ ...pos, ratio: 0.05 }, { duration: 600 });
+      } catch (err) {
+        console.warn("Camera animate failed for node", id, err);
+      }
     }
 
     cleanupRef.current = () => {
       try {
-        sigma.getGraph().setNodeAttribute(selectedNode, "highlighted", false);
-      } catch (e) {
-        // ignore
+        if (graph.hasNode(id)) graph.setNodeAttribute(id, "highlighted", false);
+      } catch (err) {
+        console.warn("Failed to remove highlighted attribute for node", id, err);
       }
     };
 
     return () => {
       if (cleanupRef.current) {
-        try {
-          cleanupRef.current();
-        } catch (e) {}
+        cleanupRef.current();
         cleanupRef.current = null;
       }
     };
-  }, [selectedNode, sigma]);
+  }, [selectedNode, sigma, graph]);
 
   return null;
 };

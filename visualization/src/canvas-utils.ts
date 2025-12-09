@@ -41,7 +41,7 @@ export function drawHover(context: CanvasRenderingContext2D, data: PlainObject, 
 
   const label = data.label;
   const subLabel = data.tag !== "unknown" ? data.tag : "";
-  const roleName = find(NODE_LABELS_METADATA, { key: data["role"] })?.name
+  const roleName = find(NODE_LABELS_METADATA, { key: data["role"] })?.name;
   const roleLabel = roleName ? roleName : "";
 
   // Then we draw the label background

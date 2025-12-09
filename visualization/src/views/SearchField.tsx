@@ -6,17 +6,13 @@ import Fuse from "fuse.js";
 import Downshift, { StateChangeOptions, StateChangeTypes } from "downshift";
 import { createPortal } from "react-dom";
 
-import { FiltersState } from "../types";
+import { FiltersState, ValueItem } from "../types";
 import { NUM_SEARCH_RESULTS } from "../constants";
-
-type ValueItem = {
-  id: string;
-  label: string;
-};
 
 const SearchField: FC<{ filters: FiltersState; externalSelected?: string | null; onSelectNode?: (id: string) => void }> = ({ filters, externalSelected, onSelectNode }) => {
   const sigma = useSigma();
   const graph = useMemo(() => sigma.getGraph(), [sigma]);
+  const graphRef = useRef(graph);
 
   const [search, setSearch] = useState<string>("");
   const [values, setValues] = useState<ValueItem[]>([]);
@@ -142,17 +138,12 @@ const SearchField: FC<{ filters: FiltersState; externalSelected?: string | null;
     };
   }, [isOpenLocal, values.length]);
 
-  // SearchField no longer directly highlights or animates the camera.
-  // Selection side-effects are handled by NodeSelectorController mounted in Root.
-
-  // React to external selections (e.g., clicks coming from GraphEventsController)
   useEffect(() => {
     if (!externalSelected) return;
 
-    // Update the input text to the node label if available and set selected id
-    const label = graph.getNodeAttribute(externalSelected, "label");
-    if (label) setSearch(label as string);
-  }, [externalSelected, graph]);
+    const label = graphRef.current.getNodeAttribute(externalSelected, "label");
+    if (label) setSearch(label);
+  }, [externalSelected]);
 
   return (
     <Downshift<ValueItem>

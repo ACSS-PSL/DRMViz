@@ -45,3 +45,8 @@ export interface FiltersState {
   maxYear: number;
   edgeLabels: Record<string, boolean>;
 }
+
+export interface ValueItem {
+  id: string;
+  label: string;
+};
