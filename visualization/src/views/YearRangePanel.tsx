@@ -55,6 +55,7 @@ const YearRangePanel: FC<{
       }}
     >
       <Range
+        draggableTrack
         values={[filters.minYear, filters.maxYear]}
         step={YEAR_STEP}
         min={lowerBound}
