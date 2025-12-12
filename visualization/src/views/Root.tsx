@@ -8,7 +8,7 @@ import { GrClose } from "react-icons/gr";
 import { Settings } from "sigma/settings";
 
 import { drawHover, drawLabel } from "../canvas-utils";
-import { YEAR_LOWER_BOUND, YEAR_UPPER_BOUND, EDGE_LABELS_METADATA, NODE_LABELS_METADATA } from "../constants";
+import { YEAR_LOWER_BOUND, YEAR_UPPER_BOUND, EDGE_LABELS_METADATA, NODE_ROLES_METADATA } from "../constants";
 import { Dataset, FiltersState } from "../types";
 import DescriptionPanel from "./DescriptionPanel";
 import GraphDataController from "./GraphDataController";
@@ -19,6 +19,7 @@ import GraphTitle from "./GraphTitle";
 import SearchField from "./SearchField";
 import YearRangePanel from "./YearRangePanel";
 import EdgeFilterPanel from "./EdgeFiltrerPanel";
+import NodeFilterPanel from "./NodeFilterPanel";
 import { keyBy, mapValues, omit, find } from "lodash";
 
 const Root: FC = () => {
@@ -29,7 +30,8 @@ const Root: FC = () => {
   const [filtersState, setFiltersState] = useState<FiltersState>({
     minYear: YEAR_LOWER_BOUND,
     maxYear: YEAR_UPPER_BOUND,
-    edgeLabels: {}
+    edgeLabels: {},
+    nodeRoles: {}
   });
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -61,7 +63,7 @@ const Root: FC = () => {
         dataset.nodes.forEach((node) =>
           graph.addNode(node.key, {
             ...node,
-            color: find(NODE_LABELS_METADATA, { key: node["role"] })?.color_fade
+            color: find(NODE_ROLES_METADATA, { key: node["role"] })?.color_fade
             //...omit(clusters[node.cluster], "key"),
             //image: `./images/${tags[node.tag].image}`,
           }),
@@ -100,7 +102,8 @@ const Root: FC = () => {
         setFiltersState({
           minYear: YEAR_LOWER_BOUND,
           maxYear: YEAR_UPPER_BOUND,
-          edgeLabels: mapValues(keyBy(EDGE_LABELS_METADATA, "key"), () => true)
+          edgeLabels: mapValues(keyBy(EDGE_LABELS_METADATA, "key"), () => true),
+          nodeRoles: mapValues(keyBy(NODE_ROLES_METADATA, "key"), () => true)
         });
         setDataset(dataset);
         requestAnimationFrame(() => setDataReady(true));
@@ -160,6 +163,22 @@ const Root: FC = () => {
               <div className="panels">
                 <SearchField filters={filtersState} externalSelected={selectedNode} onSelectNode={(id) => setSelectedNode(id)} />
                 <DescriptionPanel />
+                <NodeFilterPanel
+                  nodeRoles={NODE_ROLES_METADATA}
+                  filters={filtersState}
+                  setRoles={(roles) =>
+                    setFiltersState((filters) => ({
+                      ...filters,
+                      nodeRoles: roles,
+                    }))
+                  }
+                  toggleRole={(role) => {
+                    setFiltersState((filters) => ({
+                      ...filters,
+                      nodeRoles: filters.nodeRoles[role] ? omit(filters.nodeRoles, role) : { ...filters.nodeRoles, [role]: true },
+                    }));
+                  }}
+                />
                 <EdgeFilterPanel
                   edgeLabels={EDGE_LABELS_METADATA}
                   filters={filtersState}

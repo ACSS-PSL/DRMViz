@@ -2,7 +2,7 @@ import { useSetSettings, useSigma } from "@react-sigma/core";
 import { Attributes } from "graphology-types";
 import { FC, PropsWithChildren, useEffect, useMemo } from "react";
 
-import { EDGE_LABELS_METADATA, NODE_LABELS_METADATA } from "../constants";
+import { EDGE_LABELS_METADATA, NODE_ROLES_METADATA } from "../constants";
 import { drawHover, drawLabel } from "../canvas-utils";
 import useDebounce from "../use-debounce";
 import { find } from "lodash";
@@ -29,8 +29,8 @@ const GraphSettingsController: FC<PropsWithChildren<{ hoveredNode: string | null
           return node === debouncedHoveredNode ||
             graph.hasEdge(node, debouncedHoveredNode) ||
             graph.hasEdge(debouncedHoveredNode, node)
-            ? { ...data, zIndex: 1, color: find(NODE_LABELS_METADATA, { key: data["role"] })?.color_highlight || "#757575" }
-            : { ...data, zIndex: 0, label: "", color: find(NODE_LABELS_METADATA, { key: data["role"] })?.color_fade || "#BDBDBD", image: null, highlighted: false };
+            ? { ...data, zIndex: 1, color: find(NODE_ROLES_METADATA, { key: data["role"] })?.color_highlight || "#757575" }
+            : { ...data, zIndex: 0, label: "", color: find(NODE_ROLES_METADATA, { key: data["role"] })?.color_fade || "#BDBDBD", image: null, highlighted: false };
         }
         return data;
       },
@@ -59,8 +59,8 @@ const GraphSettingsController: FC<PropsWithChildren<{ hoveredNode: string | null
             node === debouncedHoveredNode ||
             graph.hasEdge(node, debouncedHoveredNode) ||
             graph.hasEdge(debouncedHoveredNode, node)
-              ? { ...data, zIndex: 1, color: find(NODE_LABELS_METADATA, { key: data["role"] })?.color_highlight || "#757575" }
-              : { ...data, zIndex: 0, label: "", color: find(NODE_LABELS_METADATA, { key: data["role"] })?.color_fade || "#BDBDBD", image: null, highlighted: false }
+              ? { ...data, zIndex: 1, color: find(NODE_ROLES_METADATA, { key: data["role"] })?.color_highlight || "#757575" }
+              : { ...data, zIndex: 0, label: "", color: find(NODE_ROLES_METADATA, { key: data["role"] })?.color_fade || "#BDBDBD", image: null, highlighted: false }
         : null,
     );
     sigma.setSetting(

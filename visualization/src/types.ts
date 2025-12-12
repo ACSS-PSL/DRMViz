@@ -28,7 +28,7 @@ export interface EdgeLabel {
   color_fade: string;
 }
 
-export interface NodeLabel {
+export interface NodeRole {
   key: string;
   name: string;
   color_highlight: string;
@@ -44,6 +44,7 @@ export interface FiltersState {
   minYear: number;
   maxYear: number;
   edgeLabels: Record<string, boolean>;
+  nodeRoles: Record<string, boolean>;
 }
 
 export interface ValueItem {

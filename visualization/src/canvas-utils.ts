@@ -1,7 +1,7 @@
 import { find } from "lodash";
 import { Settings } from "sigma/settings";
 import { NodeDisplayData, PartialButFor, PlainObject } from "sigma/types";
-import { NODE_LABELS_METADATA } from "./constants";
+import { NODE_ROLES_METADATA } from "./constants";
 
 const TEXT_COLOR = "#000000";
 
@@ -41,7 +41,7 @@ export function drawHover(context: CanvasRenderingContext2D, data: PlainObject, 
 
   const label = data.label;
   const subLabel = data.tag !== "unknown" ? data.tag : "";
-  const roleName = find(NODE_LABELS_METADATA, { key: data["role"] })?.name;
+  const roleName = find(NODE_ROLES_METADATA, { key: data["role"] })?.name;
   const roleLabel = roleName ? roleName : "";
 
   // Then we draw the label background
