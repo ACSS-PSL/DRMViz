@@ -12,8 +12,14 @@ const GraphDataController: FC<PropsWithChildren<{ filters: FiltersState }>> = ({
    */
   useEffect(() => {
     const { minYear, maxYear, edgeLabels, nodeRoles } = filters;
-    graph.forEachEdge((e, { year, label }, _source, _target) => {
-      graph.setEdgeAttribute(e, "hidden", year < minYear || year > maxYear || !edgeLabels[label]);
+    graph.forEachEdge((e, { year, label }, source, target) => {
+      const sourceRole = graph.getNodeAttribute(source, "role")
+      const targetRole = graph.getNodeAttribute(target, "role")
+      graph.setEdgeAttribute(e, "hidden", year < minYear || 
+                                          year > maxYear || 
+                                          !edgeLabels[label] || 
+                                          !nodeRoles[sourceRole] || 
+                                          !nodeRoles[targetRole]);
     });
     graph.forEachNode((node, { role }) => {
       let hideNode = true;
