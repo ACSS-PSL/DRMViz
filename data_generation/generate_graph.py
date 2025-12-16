@@ -2,10 +2,13 @@ import argparse
 from collections import defaultdict
 from itertools import combinations
 import os
+import logging
 
 import pandas as pd
 import networkx as nx
 import json
+
+logger = logging.getLogger(__name__)
 
 
 def load_data(inputs_path: str, dtype=str) -> list[pd.DataFrame]:
@@ -182,15 +185,17 @@ def filter_infrequent_members(df: pd.DataFrame, min_occurrences: int = 2) -> pd.
     return df
 
 
-def build_edges(df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]], 
-                                                dict[tuple[str, int], int], 
-                                                dict[str, dict[str, str]]]:
+def build_edges(thesesfr_df: pd.DataFrame, drm_df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]], 
+                                                                          dict[tuple[str, int], int], 
+                                                                          dict[str, dict[str, str]]]:
     """Builds the edges dictionary as well as additional data to facilitate information retrieval.
 
     Parameters
     ----------
-    df : pd.DataFrame
+    thesesfr_df : pd.DataFrame
         The theses dataframe.
+    drm_df : pd.Dataframe
+        The dataframe of actual DRM theses.
 
     Returns
     -------
@@ -236,11 +241,24 @@ def build_edges(df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]]
         }
         ```
     """
+
+    priority = [
+        "phd_student",
+        "advisor",
+        "jury_member",
+        "external_phd_student",
+        "external_advisor"
+    ]
+    def _set_role_by_priority(existing_label: str, new_label: str) -> str:
+        if priority.index(existing_label) <= priority.index(new_label):
+            return existing_label
+        return new_label
+
     edges: dict[tuple[str, str, str], dict[int, int]] = {}
     participation_count: dict[tuple[str, int], int] = defaultdict(int)
     members_info: dict[str, dict[str, str]] = {}
 
-    for row in df.itertuples():
+    for row in thesesfr_df.itertuples():
         year = None
         if pd.notna(row.date_soutenance):
             try:
@@ -257,10 +275,17 @@ def build_edges(df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]]
 
         participation_count[(phd_id, year)] += 1
 
-        if phd_id not in members_info:
-            members_info[phd_id] = {'fullname': phd_name or '', 'role': 'phd_student'}
+        if phd_id in drm_df.author_idref.values:
+            phd_role = "phd_student"
+            advisor_role = "advisor"
         else:
-            members_info[phd_id]['role'] = 'phd_student'
+            phd_role = "external_phd_student"
+            advisor_role = "external_advisor"
+
+        if phd_id not in members_info:
+            members_info[phd_id] = {'fullname': phd_name or '', 'role': phd_role}
+        else:
+            members_info[phd_id]['role'] = _set_role_by_priority(members_info[phd_id]['role'], phd_role)
 
         advisors = list(row.advisors) if row.advisors is not None else []
         jury_members = list(row.jury_members) if row.jury_members is not None else []
@@ -271,9 +296,9 @@ def build_edges(df: pd.DataFrame) -> tuple[dict[tuple[str, str], dict[int, int]]
                 continue
             participation_count[(adv_id, year)] += 1
             if adv_id not in members_info:
-                members_info[adv_id] = {'fullname': adv_name or '', 'role': 'advisor'}
-            elif members_info[adv_id]['role'] == "jury_member":
-                members_info[adv_id]['role'] = 'advisor'
+                members_info[adv_id] = {'fullname': adv_name or '', 'role': advisor_role}
+            else:
+                members_info[adv_id]['role'] = _set_role_by_priority(members_info[adv_id]['role'], advisor_role)
 
             key = (adv_id, phd_id, 'supervizes')
             if key not in edges:
@@ -323,6 +348,16 @@ def edges_to_df(edges: dict[tuple[str, str, str], dict[int, int]]) -> pd.DataFra
     df_edges['year'] = df_edges['year'].astype(int)
     df_edges.sort_values('year', inplace=True)
     return df_edges.sort_values(['source', 'target', 'year', 'label']).reset_index(drop=True)
+
+
+def remove_external_phd_students(df_edges: pd.DataFrame, members_info: dict[str, dict[str, str]]) -> tuple[pd.DataFrame, dict]:
+    for member_info in list(members_info.keys()):
+        if members_info[member_info]["role"] in ["external_phd_student", "external_advisor"]:
+            members_info.pop(member_info)
+    
+    df_edges = df_edges.loc[df_edges[["source", "target"]].isin(members_info.keys()).all(axis="columns")]
+
+    return df_edges, members_info
 
 
 def create_spring_layout(df_edges: pd.DataFrame, members_info: dict[str, dict[str, str]]) -> dict:
@@ -400,16 +435,27 @@ if __name__ == '__main__':
     parser.add_argument('--min-occurrences', '-m', type=int, default=2)
     parsed = parser.parse_args()
 
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt="%H:%M:%S")
+
+    logger.info("Loading the data")
     thesesfr_df, drm_df = load_data(parsed.input_path)
+    logger.info("Extracting participants in PhD juries")
     thesesfr_df = extract_thesis_participants(thesesfr_df)
+    logger.info("Filtering out non-DRM theses")
     thesesfr_df, drm_df = filter_non_drm_theses(thesesfr_df, drm_df)
+    logger.info("Applying correction to known names")
     thesesfr_df = correct_author_director_names(thesesfr_df, drm_df)
+    logger.info(f"Filtering out jury members present in less than {parsed.min_occurrences} juries")
     thesesfr_df = filter_infrequent_members(thesesfr_df, min_occurrences=parsed.min_occurrences)
-    edges, participation_count, members_info = build_edges(thesesfr_df)
+    logger.info("Building the graph")
+    edges, participation_count, members_info = build_edges(thesesfr_df, drm_df)
     df_edges = edges_to_df(edges)
+    logger.info("Remove external PhD students")
+    df_edges, members_info = remove_external_phd_students(df_edges, members_info)
+    logger.info("Adding graph features")
     spring_layout = create_spring_layout(df_edges, members_info)
     members_info = add_betweenness_centrality(df_edges, members_info)
     members_info = apply_clustering(df_edges, members_info)
 
     save_graph(members_info, df_edges, spring_layout, parsed.output_path)
-    print(f"Saved {len(members_info)} nodes and {len(df_edges)} edges.")
+    logger.info(f"Saved {len(members_info)} nodes and {len(df_edges)} edges.")
