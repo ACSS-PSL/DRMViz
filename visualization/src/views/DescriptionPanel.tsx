@@ -25,7 +25,7 @@ const DescriptionPanel: FC = () => {
         <a target="_blank" rel="noreferrer" href="https://theses.fr/">
           Theses.fr
         </a>
-        .
+        . Due to a lack of data on older theses, the jury members are not available for many theses before 2011.
       </p>
       <p>
         This web application has been developed by{" "}

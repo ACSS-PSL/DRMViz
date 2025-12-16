@@ -2,7 +2,7 @@ import { useSigma } from "@react-sigma/core";
 import { keyBy, mapValues, sortBy, values } from "lodash";
 import { FC, useEffect, useMemo, useState } from "react";
 import { AiOutlineCheckCircle, AiOutlineCloseCircle } from "react-icons/ai";
-import { FaPeopleArrows } from "react-icons/fa";
+import { BsPersonCircle } from "react-icons/bs";
 
 import { NodeRole, FiltersState } from "../types";
 import Panel from "./Panel";
@@ -46,7 +46,7 @@ const NodeFilterPanel: FC<{
     <Panel
       title={
         <>
-          <FaPeopleArrows className="text-muted" /> Roles
+          <BsPersonCircle className="text-muted" /> Roles
           {visibleNodesCount < nodeRoles.length ? (
             <span className="text-muted text-small">
               {" "}
@@ -77,7 +77,7 @@ const NodeFilterPanel: FC<{
             <li
               className="caption-row"
               key={nodeRole.key}
-              title={`${nodesCount} link${nodesCount > 1 ? "s" : ""}${
+              title={`${nodesCount} member${nodesCount > 1 ? "s" : ""}${
                 visibleNodesCount !== nodesCount
                   ? visibleNodesCount > 0
                     ? ` (only ${visibleNodesCount > 1 ? `${visibleNodesCount} are` : "one is"} visible)`
