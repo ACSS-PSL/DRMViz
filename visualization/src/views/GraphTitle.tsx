@@ -26,7 +26,7 @@ const GraphTitle: FC<{ filters: FiltersState }> = ({ filters }) => {
 
   return (
     <div className="graph-title">
-      <h1>A cartography of current and former members of Dauphine Recherche en Management based on Ph. D. defenses</h1>
+      <h1>A cartography of current and former members of <i>Dauphine Recherche en Management</i> based on Ph. D. defenses</h1>
       <h2>
         <i>
           {graph.order} current or former member{graph.order > 1 ? "s" : ""}{" "}

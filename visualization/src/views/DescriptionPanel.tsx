@@ -14,7 +14,13 @@ const DescriptionPanel: FC = () => {
       }
     >
       <p>
-        This map represents a <i>network</i> of Ph. D. students, Ph. D. advisors and jury members from the DRM research lab.{" "}
+        This map represents a <i>network</i> of Ph. D. students, Ph. D. advisors and jury members from the{" "}
+        <a target="_blank" rel="noreferrer" href="https://drm.dauphine.fr/en/drm/home.html">
+          DRM research lab
+        </a>
+        . The map has been produced for the 50 years anniversary of the lab.
+      </p>
+      <p>
         Each <i>node</i> represents a researcher and each edge represents <b>a thesis supervision</b> (directed from the{" "}
         advisor to the student), <b>a thesis examination</b> (directed from the jury member to the student), or <b>a{" "}
         co-occurrence in a jury</b> (undirected). Jury members are included even if they have not done their Ph. D. with DRM{" "}
